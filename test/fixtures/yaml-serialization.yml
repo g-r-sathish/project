@@ -1,0 +1,55 @@
+---
+#
+# Test data
+#
+hex: 0x89aBCde
+octal: 0o1234568
+infinity: 81497e967
+unquoted: 092646497
+quoted: '092646497'
+
+#
+# Reference
+#
+tracking_id: VCTRS-64270
+befe_version: 74.168.0
+content_package_version: 74.566.0
+pms_ui_version: 74.446-VCTRS-64270-SNAPSHOT
+hotfix: false
+source_bundle_version: '74.571'
+status: IN_DEV
+projects:
+  rgui:
+    source: release-ui-74.446
+    approved_to: f45b23ffd
+    approved_merge_parents:
+      - 47038f40b
+      - 8efb3766b
+      - 62c8b138e
+      - 8188cf88a
+      - 092646497
+      - faef7d8d9
+      - 98b978873
+      - 2aee2ff49
+      - 6914d4aeb
+      - d8ae4660d
+      - 9c82473eb
+      - 0e998af34
+      - a8159e958
+      - 0f4ca41e8
+      - aee81cce0
+      - ed53646e8
+      - 536baaf0b
+      - ab0dcdb32
+      - b452cbbe5
+      - f7dcab443
+      - 763cd3bdb
+      - 5e6a54bf4
+      - 81497e967
+      - 531c8b3db
+      - 35ad7837c
+      - 2be76dc8d
+      - abeb27f28
+      - 85d116641
+      - 117df4ae4
+      - e4ba58ffe

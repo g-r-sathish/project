@@ -1,0 +1,59 @@
+---
+trigger:
+  branches:
+    include:
+    - master
+  paths:
+    exclude:
+    - doc
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+stages:
+- stage: Release
+  jobs:  
+  - job: Publish
+    displayName: NPM Publish
+    steps:
+
+    - checkout: self
+      persistCredentials: true
+
+    - task: NodeTool@0
+      inputs:
+        versionSpec: '12.x'
+      displayName: 'Install Node.js'
+
+    - script: |
+        set -e
+        git status
+        branchName=$(echo "$(Build.SourceBranch)" | sed -e 's/refs.heads.//')
+        git checkout "$branchName"
+        git config --global user.email "$BUILD_REQUESTEDFOREMAIL"
+        git config --global user.name "$BUILD_QUEUEDBY"
+        git status
+      displayName: 'Prepare repo for updates'
+
+    - script: |
+        set -e
+        npm version patch -m "Bump version to %s [skip ci]"
+        release_notes_md='doc/RELEASE_NOTES.md'
+        package_json='package.json'
+        package_version="$(jq -r .version "$package_json")"
+        newl=$'\n'
+        sed -i -e "s/## NEXT/## NEXT\\$newl\\$newl## $package_version/" "$release_notes_md"
+        head -50 "$release_notes_md"
+        git commit -m 'Apply version to release notes [skip ci]' "$release_notes_md"
+      displayName: 'Update version'
+
+    - task: npmAuthenticate@0
+      inputs:
+        workingFile: '.npmrc'
+
+    - script: |
+        set -e
+        npm publish
+        git checkout -- .npmrc
+        git push
+      displayName: 'Publish new version'

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 http://maven.apache.org/xsd/settings-1.0.0.xsd">
+    <interactiveMode>false</interactiveMode>
+    <profiles>
+        <profile>
+            <id>azdo</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <repositories>
+                <repository>
+                    <id>dev-azure-com-agilysys-stay</id>
+                    <url>https://pkgs.dev.azure.com/agilysys/Stay/_packaging/PMS/maven/v1</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>true</enabled>
+                    </snapshots>
+                </repository>
+            </repositories>
+        </profile>
+    </profiles>
+    <activeProfiles>
+        <activeProfile>azdo</activeProfile>
+    </activeProfiles>
+    <servers>
+        <server>
+            <id>dev-azure-com-agilysys-stay</id>
+            <username>agilysys</username>
+            <password>{{config.personal_settings.azure_devops_token}}</password>
+        </server>
+    </servers>
+</settings>

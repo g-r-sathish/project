@@ -1,0 +1,11 @@
+deploy_name: Stay Sprint 72
+release_tag: specific
+rguest_haproxy_docker_version: 20160218-1609
+gets_updated: 69.2.3.1
+gets_updated_with_quotes: 69.0.0.1
+gets_downgraded: 80.2.0.1
+gets_downgraded_with_quotes: 80.0.0.1
+stays_the_same: 70.0.0.0
+stay_the_same_with_quotes: 70.0.0.0
+gets_project_qualifier: 70.0.0.2-VCTRS-2600
+gets_project_qualifier_with_qutoes: 70.0.0.2-VCTRS-2600

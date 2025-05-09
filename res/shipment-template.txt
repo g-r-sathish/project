@@ -1,0 +1,85 @@
+<h1><strong>{{shipmentId}}</strong></h1>
+<table>
+  <tbody>
+    <tr>
+      <th width="130px">Changeset</th>
+      <th>Version</th>
+      <th>Summary</th>
+      <th>By</th>
+      <th width="150px">When</th>
+      <th width="220px">Included</th>
+    </tr>
+{{#changesets}}
+    <tr>
+      <td><strong>{{id.changesetId}}</strong></td>
+      <td>
+{{#otherTrunk}}
+        <span style="color: rgb(153,153,153);">
+{{/otherTrunk}}
+          {{version}}
+{{#otherTrunk}}
+        </span>
+{{/otherTrunk}}
+      </td>
+      <td>
+{{#jira}}
+        <ac:structured-macro ac:name="jira">
+          <ac:parameter ac:name="key">{{id}}</ac:parameter>
+        </ac:structured-macro>
+{{/jira}}
+{{#azureDevOps}}
+        <a href="{{url}}">{{type}} {{id}}</a> - {{summary}}
+        <span> </span>
+        <ac:structured-macro ac:name="status">
+          <ac:parameter ac:name="title">{{status.text}}</ac:parameter>
+          <ac:parameter ac:name="colour">{{status.color}}</ac:parameter>
+          <ac:parameter ac:name="subtle">true</ac:parameter>
+        </ac:structured-macro>
+{{/azureDevOps}}
+{{#other}}
+        {{id}} - {{summary}}
+{{/other}}
+{{#merged.length}}
+        <br/><br/><i>Merged:</i>
+{{#merged}}
+        <br/>
+{{#jira}}
+        <ac:structured-macro ac:name="jira">
+          <ac:parameter ac:name="key">{{id}}</ac:parameter>
+        </ac:structured-macro>
+{{/jira}}
+{{#azureDevOps}}
+        <a href="{{url}}">{{type}} {{id}}</a> - {{summary}}
+        <span> </span>
+        <ac:structured-macro ac:name="status">
+          <ac:parameter ac:name="title">{{status.text}}</ac:parameter>
+          <ac:parameter ac:name="colour">{{status.color}}</ac:parameter>
+          <ac:parameter ac:name="subtle">true</ac:parameter>
+        </ac:structured-macro>
+{{/azureDevOps}}
+{{#other}}
+        {{id}} - {{summary}}
+{{/other}}
+{{/merged}}
+{{/merged.length}}
+      </td>
+      <td>{{name}}</td>
+      <td>{{date}}</td>
+      <td>
+{{#otherTrunk}}
+        <span style="color: rgb(153,153,153);">
+{{/otherTrunk}}
+{{#projectVersions}}
+        {{name}}: {{version}}<br/>
+{{/projectVersions}}
+{{#supportProjects}}
+        <em>{{name}}</em><br/>
+{{/supportProjects}}
+{{#otherTrunk}}
+        </span>
+{{/otherTrunk}}
+      </td>
+    </tr>
+{{/changesets}}
+  </tbody>
+</table>

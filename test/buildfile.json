@@ -1,0 +1,16 @@
+{
+  "bundle_name": "Stay",
+  "bundle_version": "70.0.0",
+  "root_project": "com.agilysys.pms:root-pom",
+  "dependencies_property": "stay.dependencies.version",
+    "versions_files": {
+    "repo_path": "cfg/versions-files",
+    "mainline": "master"
+  },
+  "projects": [
+    {
+      "mainline": "test/dustin",
+      "repo_path": "pms/victorsrootpom"
+    }
+  ]
+}

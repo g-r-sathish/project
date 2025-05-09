@@ -1,0 +1,18 @@
+h2. Deployment
+
+h3. Repositories to Checkout
+||Repository||Tag||
+|cfg/deployment|{{releaseTag}}|
+|cfg/versions-files|{{releaseTag}}|
+_With the above checked out as specified, the versions pointed to by *cfg/azure-inventory/group_vars/stay-versions-prod.yml* will be correct for deployment._
+
+h2. Contacts
+
+Stay QA: <TBD>
+Stay PM: <TBD>
+Stay Dev: <TBD>
+
+h2. Service Versions
+{{#deployedVersion}}
+{{key}}: {{version}}
+{{/deployedVersion}}
