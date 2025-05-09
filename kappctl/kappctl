@@ -1,0 +1,264 @@
+#!/usr/bin/env node
+//  Copyright (C) Agilysys, Inc. All rights reserved.
+'use strict';
+
+const _ = require('lodash');
+const k8s = require("@kubernetes/client-node");
+const assert = require('assert').strict;
+
+const packageJson = require('./package.json');
+const {VersionEOLError, ourPackage} = require('./lib/util/NodePackageHelper');
+const {EnsuringError, SettlementError, UserIOError} = require('./lib/util/tk');
+const {LogicalError} = require("./lib/util/LogicalError");
+const {ArgvIterator} = require('./lib/util/ArgvIterator')
+const {Context} = require('./lib/saas/Context');
+const {LOG_LEVEL, log} = require("./lib/util/ConsoleLogger");
+
+const commands = {};
+commands['conclude'] = require('./lib/commands/ConcludeCommand');
+commands['delete'] = require('./lib/commands/DeleteCommand');
+commands['deploy'] = require('./lib/commands/DeployCommand');
+commands['health'] = require('./lib/commands/HealthCommand');
+commands['info'] = require('./lib/commands/InfoCommand');
+commands['init'] = require('./lib/commands/InitCommand');
+commands['job'] = require('./lib/commands/JobCommand');
+commands['maintenance'] = require('./lib/commands/MaintenanceCommand');
+commands['restart'] = require('./lib/commands/RestartCommand');
+commands['retire'] = require('./lib/commands/RetireCommand');
+commands['revive'] = require('./lib/commands/ReviveCommand');
+commands['scale'] = require('./lib/commands/ScaleCommand');
+commands['roll-back'] = require('./lib/commands/RollBackCommand');
+commands['roll-forward'] = require('./lib/commands/RollForwardCommand');
+commands['roll-out'] = require('./lib/commands/RollOutCommand');
+commands['undo'] = require('./lib/commands/UndoCommand');
+commands['prune'] = require('./lib/commands/PruneCommand');
+
+function showHelp() {
+  log.user('version:');
+  log.user(`  ${packageJson.name}@${packageJson.version}`);
+  log.user('options:');
+  log.user('  -e|--environment {name}         Base name of the YAML file in environments repo *(Required)*');
+  log.user('  -v|--verbose                    Verbose log messages printed to console');
+  log.user('  -k|--insecure                   Allow insecure server connections when using SSL');
+  log.user('  -?|--help                       Show this help (and quit)');
+  log.user('     --version                    Show semantic version (and quit)');
+  log.user('     --dry-run                    Omit mutating operations');
+  log.user('     --bulk-apply                 Apply multiple resources in a single transaction (experimental)');
+  log.user('developer options:');
+  log.user('  -b|--config-repo-branch {name}  Specify the config-repo branch to use for this run');
+  log.user('     --allow-dirty                Skip pull and local-change check of working repositories');
+  log.user('     --auto-stash                 When dirty, stash the changes and move on');
+  log.user('     --require-subset-label       Listing resources will only include those with correct version labels');
+  log.user('usages:');
+  showCommandUsages();
+}
+
+function showVersion() {
+  log.user(packageJson.version);
+}
+
+function showCommandUsages() {
+  for (const name of Object.keys(commands).sort()) {
+    let mod = commands[name];
+    let help = mod.help || {summary: '', usages: []};
+    for (const usage of help.usages) {
+      log.user(`  kappctl ${name} ${usage}`);
+    }
+  }
+}
+
+function showCommandHelp() {
+  for (const name of Object.keys(commands)) {
+    let mod = commands[name];
+    let help = mod.help || {summary: '', usages: []};
+    log.user(`  ${name.padEnd(20)}${help.summary}`);
+    if (help.usages.length) {
+      log.user();
+      for (const usage of help.usages) {
+        log.user(`    ${name} ${usage}`);
+      }
+      log.user();
+    }
+  }
+}
+
+function usageError(errorMessage) {
+  let exitStatus = 0;
+  if (errorMessage) {
+    log.fatal(`${errorMessage} (see --help)`);
+    exitStatus = 1;
+  }
+  process.exit(exitStatus);
+}
+
+function parseCommandLine() {
+  let command = undefined;
+  let options = {
+    environmentName: undefined,
+    configRepoBranch: undefined,
+    showHelp: false,
+    showVersion: false,
+    verbose: false,
+    allowDirtyRepositories: false,
+    autoStash: false,
+    rejectUnauthorized: true,
+    bulkApply: false,
+    dryRun: false,
+    requireSubsetLabels: false
+  };
+  let argsItr = new ArgvIterator();
+  if (!argsItr.hasNext()) {
+    usageError('No arguments');
+  }
+  for (let arg = argsItr.next(); !arg.done; arg = argsItr.next()) {
+    switch (arg.value) {
+      case '-e':
+      case '--environment':
+        options.environmentName = argsItr.next().value;
+        break;
+      case '-b':
+      case '--config-repo-branch':
+        options.configRepoBranch = argsItr.next().value;
+        break;
+      case '-v':
+      case '--verbose':
+        log.loggingLevel = LOG_LEVEL.VERBOSE;
+        options.verbose = true;
+        break;
+      case '-?':
+      case '--help':
+        options.showHelp = true;
+        break;
+      case '--version':
+        options.showVersion = true;
+        break;
+      case '-k':
+      case '--insecure':
+        options.rejectUnauthorized = false;
+        break;
+      case '--dry-run':
+        options.dryRun = true;
+        break;
+      case '--bulk-apply':
+        options.bulkApply = true;
+        break;
+      case '--allow-dirty':
+        options.allowDirtyRepositories = true;
+        break;
+      case '--auto-stash':
+        options.autoStash = true;
+        break;
+      case '--require-subset-labels':
+        options.requireSubsetLabels = true;
+        break;
+      default:
+        if (command) {
+          if (arg.isOption()) {
+            let key = arg.value;
+            let isFlag = command.addOption(key);
+            if (!isFlag) {
+              if (argsItr.peek().isValue()) {
+                arg = argsItr.next();
+                command.addOptionValue(key, arg.value);
+              } else {
+                throw new LogicalError(`Value missing for option: ${key}`);
+              }
+            }
+          } else {
+            command.args.push(arg.value);
+          }
+        } else {
+          if (arg.isOption()) {
+            throw new LogicalError(`Unknown global option: ${arg.value}`);
+          } else {
+            let commandModule = commands[arg.value];
+            if (!commandModule) {
+              usageError(`No such command: ${arg.value}`);
+            }
+            command = new commandModule.Command();
+          }
+        }
+    }
+  }
+  return {options, command};
+}
+
+function printError(e) {
+  let message;
+  log.debug(e);
+  if (e instanceof k8s.HttpError) {
+    try {
+      message = _.get(e, 'response.response.body.message')
+          || _.get(e, 'response.body.message')
+          || _.get(e, 'body.Message')
+          || _.get(e, 'body.Code.Code');
+      assert.ok(message, `[HttpError] Missing response.body.message`);
+      log.fatal(`[${e.name}] ${message}`);
+    } catch (e2) {
+      log.fatal('Could not extract HTTP message from error');
+      log.fatal(e);
+    }
+  } else if (e instanceof VersionEOLError) {
+    const p = e.helper.packageName;
+    log.fatal(e.message);
+    log.group('Upgrade hint:');
+    log.user(`npm remove --global "${p}"`);
+    log.user(`npm install --global "${p}"`);
+    log.groupEnd();
+  } else if (e instanceof UserIOError) {
+    log.verbose(e.message);
+  } else if (e instanceof LogicalError || e instanceof EnsuringError) {
+    log.fatal(e.message);
+  } else {
+    log.fatal(e);
+  }
+}
+
+function checkNodeVersion() {
+  const MAJOR_VERSION = 12;
+  const MINOR_VERSION = 0;
+  const version = process.version;
+  const semver = version.replace(/^v/, '').split('.');
+  assert.ok(semver[0] > MAJOR_VERSION || +semver[0] === MAJOR_VERSION && +semver[1] >= MINOR_VERSION);
+}
+
+async function main() {
+  try {
+    let {options, command} = parseCommandLine();
+    if (options.showHelp) {
+      showHelp();
+      return;
+    }
+    if (options.showVersion) {
+      showVersion();
+      return;
+    }
+    if (!command) {
+      usageError('No command specified');
+    }
+    if (!options.environmentName) {
+      usageError('No environment (-e|--environment) specified');
+    }
+    checkNodeVersion();
+    ourPackage.lockPidFile();
+    let saasContext = new Context(options);
+    await saasContext.postConstruct();
+    log.startCursor();
+    await command.init(saasContext);
+    await command.logContext();
+    await command.run();
+  } catch (e) {
+    process.exitCode = 1;
+    if (e instanceof SettlementError) {
+      for (const rejection of e.rejections) {
+        printError(rejection);
+      }
+    } else {
+      printError(e);
+    }
+  } finally {
+    ourPackage.unlockPidFile();
+  }
+}
+
+main();

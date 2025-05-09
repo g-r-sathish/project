@@ -1,0 +1,14 @@
+# /config-service/monitor
+#export spring_cloud_config_password=Agile1
+#export spring_cloud_config_username=user
+#export spring_application_name=aks-cluster-setup
+#export spring_cloud_config_uri=http://localhost:8888/config-service
+
+# Self-signed certs (tsib)
+#export NODE_TLS_REJECT_UNAUTHORIZED=0 # for kappctl
+#GODEBUG=x509ignoreCN=0 # for kubectl - use kube config from elias instead
+
+export KUBECONFIG=~/.kube/lab-stay-giesr-scrubber.yaml
+export spring_cloud_config_password=67824EEF-D227-4623-AF26-047E61859107
+git -C ../environments pull
+git -C ../config-repo pull

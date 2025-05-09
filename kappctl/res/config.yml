@@ -1,0 +1,69 @@
+deploy:
+  services:
+    cluster:
+      - clustercheck
+    subset:
+      - config-service
+    saas:
+      - account-service
+      - aggregate
+      - comment-service
+      - igconnector-service
+      - integration-service
+      - api-aggregator
+      - payevent-service
+      - payment-service
+      - ui-service
+      - profile-service
+      - property-service
+      - rate-service
+      - relay-service
+      - report-service
+      - reservation-service
+      - servicerequest-service
+      - stay-befe
+      - watchdog-service
+  jobs:
+    init:
+      mongo-ops: '["-a", "update-indexes"]'
+      postgres-ops: '["-a", "apply-changes"]'
+      pms-common-bootstrap:
+      rgueststay-content-package:
+    deploy:
+      mongo-ops: '["-a", "update-pre-deploy-indexes"]'
+      postgres-ops: '["-a", "apply-changes", "-v", "{{ rollout.postgres_ops_version }}"]'
+      pms-common-bootstrap:
+      pms-common-bootstrap-app:
+      rgueststay-content-package:
+    adhoc:
+      databasescripts: '["{{ rollout.vars.scriptPath }}"]'
+    conclude:
+      mongo-ops: '["-a", "update-post-deploy-indexes"]'
+    rollback:
+      postgres-ops: '["-a", "apply-changes", "-v", "{{ rollout.postgres_ops_version }}"]'
+
+quirks:
+  application-name-map:
+    stay-befe: befe
+    api-aggregator: node-api-aggregator
+
+templates:
+  init:
+    cluster:
+      - k8s-namespace.yml.njk
+    pools:
+      - k8s-gateway.yml.njk
+      - k8s-pools.yml.njk
+    subset:
+      - k8s-inbound.yml.njk
+    saas:
+      - k8s-service.yml.njk
+      - k8s-vs-mesh.yml.njk
+  deploy:
+    job:
+      - k8s-job.yml.njk
+    saas:
+      - k8s-deployment.yml.njk
+  promote:
+    pools:
+      - k8s-pools.yml.njk
